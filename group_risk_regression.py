@@ -18,6 +18,7 @@ dataset = dataset.drop(['ID'], axis=1)
 target = np.asarray(dataset['Max overdue'], dtype=np.float)
 data = np.asarray(dataset.drop(['Max overdue'], axis=1), dtype=np.float)  # All input variables
 #  data = np.asarray(dataset['Avg overdue 6m'], dtype=np.float) #  Single input variable
+#  xtrain, xtest, ytrain, ytest = cross_validation.train_test_split(data, target, test_size=0.2, random_state=42)
 scaler = preprocessing.StandardScaler()
 
 
@@ -50,6 +51,31 @@ def make_pca_index():
 #  make_pca_index()
 
 
+# Predict the outcome based on Days PD today, Bad 6M history, Has 6M history,
+# Max days od history, 2m increase, 3m St Dev, # active loans, % savings
+def set1_predictions():
+    set1_dataset = dataset[['Days PD today', 'Bad 6m history', 'Has 6m history', 'Max days od hist',
+                           '2m increase', '3m ST DEV', '# active loans', '% saving']]
+    set1_dataset = scaler.fit_transform(set1_dataset)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor.fit(set1_dataset, target)
+    y_predicted = regressor.predict(set1_dataset)
+    return y_predicted
+
+
+#  Predicting the outcome based on  2m increase, 1m increase, Max days od hist, 3m ST DEV, Bad 6m history, Urban,
+# % saving, Avg. balance, Nakuru, # active loans
+def set2_prediction():
+    set2_dataset = dataset[['2m increase', '1m increase', 'Max days od hist', '3m ST DEV', 'Bad 6m history',
+                            'Urban', '% saving', 'Avg. balance', 'Nakuru', '# active loans']]
+
+    set2_dataset = scaler.fit_transform(set2_dataset)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor.fit(set2_dataset, target)
+    y_predicted = regressor.predict(set2_dataset)
+    return y_predicted
+
+
 #  Select the top features that will maximize output(target)
 def select_feature_importance():
     column_names = np.asarray(dataset.columns.values)
@@ -62,3 +88,25 @@ def select_feature_importance():
     print sorted(zip(map(lambda x: round(x, 4), scores), column_names), reverse=True)
 
 #  select_feature_importance()
+
+
+def selectedfeatures_prediction():
+    selected_dataset = dataset[['Max days od hist', 'Max overdue', 'Has 6m history', 'Days PD today', '2m increase',
+                               'Urban', 'Median 3 m', 'Days PD m-2', '1m increase', 'Avg. principal disbursed',
+                                'Days PD m-1', '% new clients', 'Max overdue 6m']]
+
+    selected_dataset = scaler.fit_transform(selected_dataset)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor.fit(selected_dataset, target)
+    y_predicted = regressor.predict(selected_dataset)
+    return y_predicted
+
+
+set1 = set1_predictions()
+set2 = set2_prediction()
+selected = selectedfeatures_prediction()
+dataset['predicted(set1)'] = set1
+dataset['predicted(set2)'] = set2
+dataset['predicted(selected)'] = selected
+dataset.to_csv('riskness_prediction_report.csv')
+print '-saved-'
