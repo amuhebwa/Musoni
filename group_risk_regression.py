@@ -11,6 +11,9 @@ import warnings
 
 
 warnings.filterwarnings("ignore")  # Turn off warnings for now. They are running me crazy
+no_of_steps = 10000
+lrning_rate = 0.045
+
 file_name = 'datasets/musoni_riskiness_dataset.csv'
 file_location = os.getcwd() + '/' + file_name
 dataset = pd.read_csv(file_location, low_memory=False)
@@ -51,13 +54,23 @@ def make_pca_index():
 #  make_pca_index()
 
 
+# All input variables
+def allvariables_prediction():
+
+    allvariables_dataset = scaler.fit_transform(data)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[50, 50], steps=10000, learning_rate=lrning_rate)
+    regressor.fit(allvariables_dataset, target)
+    y_predicted = regressor.predict(allvariables_dataset)
+    return y_predicted
+
+
 # Predict the outcome based on Days PD today, Bad 6M history, Has 6M history,
 # Max days od history, 2m increase, 3m St Dev, # active loans, % savings
 def set1_predictions():
     set1_dataset = dataset[['Days PD today', 'Bad 6m history', 'Has 6m history', 'Max days od hist',
                            '2m increase', '3m ST DEV', '# active loans', '% saving']]
     set1_dataset = scaler.fit_transform(set1_dataset)
-    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[50, 50], steps=no_of_steps, learning_rate=lrning_rate)
     regressor.fit(set1_dataset, target)
     y_predicted = regressor.predict(set1_dataset)
     return y_predicted
@@ -70,7 +83,7 @@ def set2_prediction():
                             'Urban', '% saving', 'Avg. balance', 'Nakuru', '# active loans']]
 
     set2_dataset = scaler.fit_transform(set2_dataset)
-    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[50, 50], steps=no_of_steps, learning_rate=lrning_rate)
     regressor.fit(set2_dataset, target)
     y_predicted = regressor.predict(set2_dataset)
     return y_predicted
@@ -78,35 +91,48 @@ def set2_prediction():
 
 #  Select the top features that will maximize output(target)
 def select_feature_importance():
-    column_names = np.asarray(dataset.columns.values)
+    data4columns = dataset.drop(['Max overdue'], axis=1)
+    column_names = np.asarray(data4columns.columns.values)
     lasso = RandomizedLasso(alpha=0.025)
     scaled_data = scaler.fit_transform(data)
     lasso.fit(scaled_data, target)
     scores = lasso.scores_
-    print column_names
-    print scores
+    #  column_names
+    #  print scores
     print sorted(zip(map(lambda x: round(x, 4), scores), column_names), reverse=True)
 
 #  select_feature_importance()
 
 
+# Prediction for selected values
 def selectedfeatures_prediction():
-    selected_dataset = dataset[['Max days od hist', 'Max overdue', 'Has 6m history', 'Days PD today', '2m increase',
-                               'Urban', 'Median 3 m', 'Days PD m-2', '1m increase', 'Avg. principal disbursed',
-                                'Days PD m-1', '% new clients', 'Max overdue 6m']]
-
+    selected_dataset = dataset[['2m increase', 'Bad 6m history', 'Days PD today', 'Avg days od hist',
+                                'Max days od hist', '3m ST DEV', '1m increase', 'Max overdue 6m', 'Median 3 m',
+                                'Days PD m-1', 'Days PD m-2', 'Avg overdue 6m']]
     selected_dataset = scaler.fit_transform(selected_dataset)
-    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[80, 80], steps=10000, batch_size=1)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[50, 50], steps=no_of_steps, learning_rate=0.045)
     regressor.fit(selected_dataset, target)
     y_predicted = regressor.predict(selected_dataset)
     return y_predicted
 
 
-set1 = set1_predictions()
-set2 = set2_prediction()
-selected = selectedfeatures_prediction()
-dataset['predicted(set1)'] = set1
-dataset['predicted(set2)'] = set2
-dataset['predicted(selected)'] = selected
-dataset.to_csv('riskness_prediction_report.csv')
-print '-saved-'
+# Prediction for the selectedd 26 locations
+def top26features_prediction():
+    top26_dataset = dataset[['2m increase', 'Bad 6m history', 'Days PD today', 'Avg days od hist',
+                             'Max days od hist', '3m ST DEV', '1m increase', 'Max overdue 6m', 'Median 3 m',
+                             'Days PD m-1', 'Days PD m-2', 'Avg overdue 6m', 'Urban', 'Avg. principal disbursed',
+                             '% female', 'Avg. balance', 'Age at disbursement', 'Active clients', '% saving',
+                             '% new clients', '# active loans', 'Loan cycle', 'Has 6m history', '% Wepesi',
+                             '% Nawiri', '% KB']]
+    top26_dataset = scaler.fit_transform(top26_dataset)
+    regressor = skflow.TensorFlowDNNRegressor(hidden_units=[50, 50], steps=no_of_steps, learning_rate=lrning_rate)
+    regressor.fit(top26_dataset, target)
+    y_predicted = regressor.predict(top26_dataset)
+    return y_predicted
+dataset['Prediction(set1)'] = set1_predictions()
+dataset['Prediction(set2)'] = set2_prediction()
+dataset['Prediction(selected)'] = selectedfeatures_prediction()
+dataset['Prediction(top 26)'] = top26features_prediction()
+dataset['Prediction(all_input_variables)'] = allvariables_prediction()
+dataset.to_csv('riskness_predicted_results.csv')
+print '-Done-'
