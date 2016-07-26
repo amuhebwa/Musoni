@@ -10,7 +10,7 @@ import numpy as np
 import warnings
 
 
-warnings.filterwarnings("ignore")  # Turn off warnings for now. They are running me crazy
+warnings.filterwarnings("ignore")  # Surpress warnings
 no_of_steps = 10000
 lrning_rate = 0.045
 
